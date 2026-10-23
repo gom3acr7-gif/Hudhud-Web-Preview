@@ -34,18 +34,23 @@ jobs:
           mkdir -p source
           unzip -q Hudhud-source-web.zip -d source
 
-      - name: Check project files
+      - name: Find project files
         run: |
-          echo "Searching for package.json..."
-          find source -name package.json -print
+          find source -maxdepth 4 -name package.json -print
 
       - name: Install dependencies
-        working-directory: source
-        run: npm install
+        run: |
+          PACKAGE_DIR=$(dirname "$(find source -name package.json -print -quit)")
+          echo "Project directory: $PACKAGE_DIR"
+          echo "PACKAGE_DIR=$PACKAGE_DIR" >> "$GITHUB_ENV"
+          cd "$PACKAGE_DIR"
+          npm install
 
       - name: Build website
-        working-directory: source
-        run: npm run build
+        run: |
+          cd "$PACKAGE_DIR"
+          npm run build
+          echo "BUILD_DIR=$PACKAGE_DIR/dist" >> "$GITHUB_ENV"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
