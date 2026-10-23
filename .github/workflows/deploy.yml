@@ -34,23 +34,38 @@ jobs:
           mkdir -p source
           unzip -q Hudhud-source-web.zip -d source
 
-      - name: Find project files
+      - name: Locate project
+        shell: bash
         run: |
-          find source -maxdepth 4 -name package.json -print
+          PACKAGE_FILE=$(find source -name package.json -print -quit)
+
+          if [ -z "$PACKAGE_FILE" ]; then
+            echo "ERROR: package.json was not found inside the ZIP."
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$PACKAGE_FILE")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project directory: $PROJECT_DIR"
 
       - name: Install dependencies
+        shell: bash
         run: |
-          PACKAGE_DIR=$(dirname "$(find source -name package.json -print -quit)")
-          echo "Project directory: $PACKAGE_DIR"
-          echo "PACKAGE_DIR=$PACKAGE_DIR" >> "$GITHUB_ENV"
-          cd "$PACKAGE_DIR"
+          cd "$PROJECT_DIR"
           npm install
 
       - name: Build website
+        shell: bash
         run: |
-          cd "$PACKAGE_DIR"
+          cd "$PROJECT_DIR"
           npm run build
-          echo "BUILD_DIR=$PACKAGE_DIR/dist" >> "$GITHUB_ENV"
+
+          if [ ! -d dist ]; then
+            echo "ERROR: Build completed but dist folder was not found."
+            exit 1
+          fi
+
+          echo "BUILD_DIR=$PROJECT_DIR/dist" >> "$GITHUB_ENV"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -58,7 +73,7 @@ jobs:
       - name: Upload website
         uses: actions/upload-pages-artifact@v3
         with:
-          path: source/dist
+          path: ${{ env.BUILD_DIR }}
 
   deploy:
     needs: build
