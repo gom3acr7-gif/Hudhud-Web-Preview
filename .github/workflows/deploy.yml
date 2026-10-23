@@ -30,7 +30,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: source/package.json
 
       - name: Extract Hudhud project
         run: unzip -q Hudhud-source-web.zip -d source
