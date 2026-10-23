@@ -1,5 +1,4 @@
 
-
 name: Deploy Hudhud Web Preview
 
 on:
@@ -29,10 +28,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Extract Hudhud project
-        run: unzip -q Hudhud-source-web.zip -d source
+        run: |
+          mkdir -p source
+          unzip -q Hudhud-source-web.zip -d source
+
+      - name: Check project files
+        run: |
+          echo "Searching for package.json..."
+          find source -name package.json -print
 
       - name: Install dependencies
         working-directory: source
@@ -53,6 +58,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
