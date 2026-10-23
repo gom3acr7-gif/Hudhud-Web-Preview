@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Extract Hudhud project
+      - name: Extract project ZIP
         run: |
           mkdir -p source
           unzip -q Hudhud-source-web.zip -d source
@@ -37,16 +37,17 @@ jobs:
       - name: Locate project
         shell: bash
         run: |
-          PACKAGE_FILE=$(find source -name package.json -print -quit)
+          PACKAGE_FILE=$(find source -type f -name package.json \
+            -not -path '*/node_modules/*' -print -quit)
 
           if [ -z "$PACKAGE_FILE" ]; then
-            echo "ERROR: package.json was not found inside the ZIP."
+            echo "ERROR: package.json not found in ZIP."
             exit 1
           fi
 
-          PROJECT_DIR=$(dirname "$PACKAGE_FILE")
+          PROJECT_DIR="$(dirname "$PACKAGE_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Project directory: $PROJECT_DIR"
+          echo "Project found: $PROJECT_DIR"
 
       - name: Install dependencies
         shell: bash
@@ -60,12 +61,23 @@ jobs:
           cd "$PROJECT_DIR"
           npm run build
 
-          if [ ! -d dist ]; then
-            echo "ERROR: Build completed but dist folder was not found."
+          if [ -d dist ]; then
+            echo "BUILD_DIR=$PROJECT_DIR/dist" >> "$GITHUB_ENV"
+          elif [ -d build ]; then
+            echo "BUILD_DIR=$PROJECT_DIR/build" >> "$GITHUB_ENV"
+          else
+            echo "ERROR: No dist or build folder was created."
             exit 1
           fi
 
-          echo "BUILD_DIR=$PROJECT_DIR/dist" >> "$GITHUB_ENV"
+      - name: Verify website files
+        shell: bash
+        run: |
+          echo "Website output: $BUILD_DIR"
+          test -f "$BUILD_DIR/index.html" || {
+            echo "ERROR: index.html not found in build output."
+            exit 1
+          }
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
